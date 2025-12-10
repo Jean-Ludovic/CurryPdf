@@ -2,8 +2,7 @@ import streamlit as st
 import qrcode
 from PIL import Image
 import io
-from reportlab.lib.pagesizes import letter, A4
-from reportlab.lib.units import inch
+from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
 import datetime
@@ -12,10 +11,10 @@ import datetime
 st.set_page_config(
     page_title="QR Code Generator & PDF Exporter",
     page_icon="📱",
-    layout="centered"
+    layout="wide"
 )
 
-# Custom CSS for better styling
+# Custom CSS
 st.markdown("""
     <style>
     .main-header {
@@ -25,226 +24,260 @@ st.markdown("""
         color: #1f77b4;
         margin-bottom: 2rem;
     }
-    .stTextArea textarea {
-        min-height: 150px;
-    }
     </style>
 """, unsafe_allow_html=True)
 
 st.markdown('<h1 class="main-header">📱 QR Code Generator & PDF Exporter</h1>', unsafe_allow_html=True)
 
-# Initialize session state
-if 'qr_image' not in st.session_state:
-    st.session_state.qr_image = None
-if 'link' not in st.session_state:
-    st.session_state.link = ""
-if 'text_content' not in st.session_state:
-    st.session_state.text_content = ""
-
-# Sidebar for settings
+# Sidebar for QR Code settings
 with st.sidebar:
-    st.header("⚙️ Settings")
-    
-    # QR Code size
-    qr_size = st.slider("QR Code Size", min_value=100, max_value=500, value=300, step=50)
-    
-    # QR Code border
-    border = st.slider("QR Code Border", min_value=1, max_value=10, value=4, step=1)
-    
-    # Error correction level
+    st.header("⚙️ QR Code Settings")
+    qr_size = st.slider("QR Code Size", 100, 500, 300, 50)
+    border = st.slider("QR Code Border", 1, 10, 4)
     error_correction = st.selectbox(
-        "Error Correction Level",
+        "Error Correction",
         ["LOW", "MEDIUM", "QUARTILE", "HIGH"],
         index=1
     )
     
-    error_correction_map = {
+    error_map = {
         "LOW": qrcode.constants.ERROR_CORRECT_L,
         "MEDIUM": qrcode.constants.ERROR_CORRECT_M,
         "QUARTILE": qrcode.constants.ERROR_CORRECT_Q,
         "HIGH": qrcode.constants.ERROR_CORRECT_H
     }
 
-# Main content area
-col1, col2 = st.columns([1, 1])
+# Main layout with tabs
+tab1, tab2 = st.tabs(["📝 Content", "🎨 Formatting"])
 
-with col1:
-    st.subheader("🔗 Enter Link")
-    link_input = st.text_input(
-        "URL/Link",
-        value=st.session_state.link,
-        placeholder="https://example.com",
-        key="link_input"
-    )
-    
-    if st.button("Generate QR Code", type="primary", use_container_width=True):
-        if link_input.strip():
-            try:
-                # Create QR code
-                qr = qrcode.QRCode(
-                    version=1,
-                    error_correction=error_correction_map[error_correction],
-                    box_size=10,
-                    border=border,
-                )
-                qr.add_data(link_input)
-                qr.make(fit=True)
-                
-                # Create image
-                img = qr.make_image(fill_color="black", back_color="white")
-                img = img.resize((qr_size, qr_size), Image.Resampling.LANCZOS)
-                
-                # Store in session state
-                st.session_state.qr_image = img
-                st.session_state.link = link_input
-                st.success("QR Code generated successfully!")
-            except Exception as e:
-                st.error(f"Error generating QR code: {str(e)}")
-        else:
-            st.warning("Please enter a valid link!")
-
-with col2:
-    st.subheader("📝 Add/Edit Text")
-    text_content = st.text_area(
-        "Text Content",
-        value=st.session_state.text_content,
-        placeholder="Enter your text here...\nYou can add multiple lines.\nThis text will appear in the PDF.",
-        height=200,
-        key="text_input"
-    )
-    st.session_state.text_content = text_content
-
-# Display QR Code
-if st.session_state.qr_image:
-    st.divider()
-    st.subheader("📱 Generated QR Code")
-    
-    # Display QR code
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        st.image(st.session_state.qr_image, caption=f"QR Code for: {st.session_state.link}")
-    
-    # Download and PDF buttons
-    st.divider()
-    col1, col2, col3 = st.columns([1, 1, 1])
+with tab1:
+    col1, col2 = st.columns([1, 1])
     
     with col1:
-        # Download QR Code as PNG
-        img_buffer = io.BytesIO()
-        st.session_state.qr_image.save(img_buffer, format='PNG')
-        img_buffer.seek(0)
+        st.subheader("🔗 Enter Link")
+        link = st.text_input("URL/Link", placeholder="https://example.com", key="link")
+    
+    with col2:
+        st.subheader("📝 Add Text")
+        text = st.text_area(
+            "Text Content",
+            placeholder="Enter your text here...",
+            height=120,
+            key="text"
+        )
+
+with tab2:
+    st.subheader("🎨 Text Formatting Options")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.markdown("**Title Formatting**")
+        title_font = st.selectbox(
+            "Title Font",
+            ["Helvetica", "Helvetica-Bold", "Times-Roman", "Times-Bold", "Courier", "Courier-Bold"],
+            index=1
+        )
+        title_size = st.slider("Title Size", 12, 36, 20)
+        title_color = st.color_picker("Title Color", "#000000")
+    
+    with col2:
+        st.markdown("**Text Formatting**")
+        text_font = st.selectbox(
+            "Text Font",
+            ["Helvetica", "Helvetica-Bold", "Times-Roman", "Times-Bold", "Courier", "Courier-Bold"],
+            index=0
+        )
+        text_size = st.slider("Text Size", 8, 24, 11)
+        text_color = st.color_picker("Text Color", "#000000")
+    
+    with col3:
+        st.markdown("**Layout**")
+        text_align = st.selectbox(
+            "Text Alignment",
+            ["Left", "Center", "Right"],
+            index=0
+        )
+        line_spacing = st.slider("Line Spacing", 10, 30, 15)
+        margin = st.slider("Page Margin", 30, 100, 50)
+
+# Generate button
+if st.button("🎯 Generate QR Code", type="primary", use_container_width=True):
+    if link.strip():
+        try:
+            qr = qrcode.QRCode(
+                version=1,
+                error_correction=error_map[error_correction],
+                box_size=10,
+                border=border,
+            )
+            qr.add_data(link)
+            qr.make(fit=True)
+            
+            qr_image = qr.make_image(fill_color="black", back_color="white")
+            qr_image = qr_image.resize((qr_size, qr_size), Image.Resampling.LANCZOS)
+            
+            st.session_state.qr_image = qr_image
+            st.session_state.link = link
+            st.session_state.text = text
+            st.success("✅ QR Code generated!")
+        except Exception as e:
+            st.error(f"❌ Error: {str(e)}")
+    else:
+        st.warning("⚠️ Please enter a valid link!")
+
+# Display and download QR Code
+if 'qr_image' in st.session_state and st.session_state.qr_image:
+    st.divider()
+    st.subheader("📱 Your QR Code")
+    
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.image(st.session_state.qr_image, caption=f"QR Code: {st.session_state.link}")
+    
+    st.divider()
+    
+    # Download buttons
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        # PNG download
+        img_buf = io.BytesIO()
+        st.session_state.qr_image.save(img_buf, format='PNG')
+        img_buf.seek(0)
         
         st.download_button(
-            label="📥 Download QR Code (PNG)",
-            data=img_buffer,
-            file_name=f"qrcode_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.png",
-            mime="image/png",
+            "📥 Download PNG",
+            img_buf,
+            f"qrcode_{datetime.datetime.now():%Y%m%d_%H%M%S}.png",
+            "image/png",
             use_container_width=True
         )
     
     with col2:
-        # Download QR Code as JPG
-        img_buffer_jpg = io.BytesIO()
-        rgb_image = st.session_state.qr_image.convert('RGB')
-        rgb_image.save(img_buffer_jpg, format='JPEG', quality=95)
-        img_buffer_jpg.seek(0)
+        # JPG download
+        jpg_buf = io.BytesIO()
+        st.session_state.qr_image.convert('RGB').save(jpg_buf, format='JPEG', quality=95)
+        jpg_buf.seek(0)
         
         st.download_button(
-            label="📥 Download QR Code (JPG)",
-            data=img_buffer_jpg,
-            file_name=f"qrcode_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg",
-            mime="image/jpeg",
+            "📥 Download JPG",
+            jpg_buf,
+            f"qrcode_{datetime.datetime.now():%Y%m%d_%H%M%S}.jpg",
+            "image/jpeg",
             use_container_width=True
         )
     
     with col3:
-        # Generate and download PDF
-        def generate_pdf():
-            buffer = io.BytesIO()
-            c = canvas.Canvas(buffer, pagesize=A4)
-            width, height = A4
+        # PDF generation with formatting
+        def hex_to_rgb(hex_color):
+            hex_color = hex_color.lstrip('#')
+            return tuple(int(hex_color[i:i+2], 16)/255 for i in (0, 2, 4))
+        
+        def create_pdf():
+            buf = io.BytesIO()
+            c = canvas.Canvas(buf, pagesize=A4)
+            w, h = A4
             
             # Title
-            c.setFont("Helvetica-Bold", 20)
-            c.drawString(50, height - 50, "QR Code Document")
+            c.setFont(title_font, title_size)
+            c.setFillColorRGB(*hex_to_rgb(title_color))
             
-            # Date
+            title_text = "QR Code Document"
+            if text_align == "Center":
+                title_x = (w - c.stringWidth(title_text, title_font, title_size)) / 2
+            elif text_align == "Right":
+                title_x = w - margin - c.stringWidth(title_text, title_font, title_size)
+            else:
+                title_x = margin
+            
+            c.drawString(title_x, h - margin, title_text)
+            
+            # Date and Link
             c.setFont("Helvetica", 10)
-            date_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            c.drawString(50, height - 75, f"Generated on: {date_str}")
-            
-            # Link
-            c.setFont("Helvetica", 12)
-            c.drawString(50, height - 100, f"Link: {st.session_state.link}")
+            c.setFillColorRGB(0, 0, 0)
+            c.drawString(margin, h - margin - 25, f"Generated: {datetime.datetime.now():%Y-%m-%d %H:%M:%S}")
+            c.drawString(margin, h - margin - 40, f"Link: {st.session_state.link}")
             
             # Text content
-            if st.session_state.text_content.strip():
-                y_position = height - 130
-                c.setFont("Helvetica-Bold", 14)
-                c.drawString(50, y_position, "Additional Text:")
-                y_position -= 20
+            y_pos = h - margin - 70
+            if st.session_state.text.strip():
+                c.setFont(title_font, 14)
+                section_title = "Additional Text:"
                 
-                c.setFont("Helvetica", 11)
-                # Handle multi-line text
-                lines = st.session_state.text_content.split('\n')
-                for line in lines:
-                    # Word wrap for long lines
-                    words = line.split(' ')
-                    current_line = ""
+                if text_align == "Center":
+                    section_x = (w - c.stringWidth(section_title, title_font, 14)) / 2
+                elif text_align == "Right":
+                    section_x = w - margin - c.stringWidth(section_title, title_font, 14)
+                else:
+                    section_x = margin
+                
+                c.drawString(section_x, y_pos, section_title)
+                y_pos -= 25
+                
+                c.setFont(text_font, text_size)
+                c.setFillColorRGB(*hex_to_rgb(text_color))
+                
+                for line in st.session_state.text.split('\n'):
+                    words = line.split()
+                    current = ""
                     for word in words:
-                        test_line = current_line + word + " " if current_line else word + " "
-                        if c.stringWidth(test_line, "Helvetica", 11) < width - 100:
-                            current_line = test_line
+                        test = f"{current} {word}".strip()
+                        if c.stringWidth(test, text_font, text_size) < w - (2 * margin):
+                            current = test
                         else:
-                            if current_line:
-                                c.drawString(50, y_position, current_line.strip())
-                                y_position -= 15
-                            current_line = word + " "
-                    if current_line:
-                        c.drawString(50, y_position, current_line.strip())
-                        y_position -= 15
-                    y_position -= 5  # Extra space between paragraphs
+                            if current:
+                                if text_align == "Center":
+                                    text_x = (w - c.stringWidth(current, text_font, text_size)) / 2
+                                elif text_align == "Right":
+                                    text_x = w - margin - c.stringWidth(current, text_font, text_size)
+                                else:
+                                    text_x = margin
+                                
+                                c.drawString(text_x, y_pos, current)
+                                y_pos -= line_spacing
+                            current = word
                     
-                    if y_position < 200:  # Start new page if needed
-                        c.showPage()
-                        y_position = height - 50
+                    if current:
+                        if text_align == "Center":
+                            text_x = (w - c.stringWidth(current, text_font, text_size)) / 2
+                        elif text_align == "Right":
+                            text_x = w - margin - c.stringWidth(current, text_font, text_size)
+                        else:
+                            text_x = margin
+                        
+                        c.drawString(text_x, y_pos, current)
+                        y_pos -= line_spacing + 5
             
-            # QR Code image
-            qr_y_position = y_position - 50 if st.session_state.text_content.strip() else height - 200
-            qr_size_pdf = min(200, qr_y_position - 100)
+            # QR Code
+            qr_y = y_pos - 50 if st.session_state.text.strip() else h - 200
+            qr_pdf_size = min(250, max(150, qr_y - 100))
             
-            # Convert PIL image to format reportlab can use
-            img_buffer_pdf = io.BytesIO()
-            st.session_state.qr_image.save(img_buffer_pdf, format='PNG')
-            img_buffer_pdf.seek(0)
-            qr_img = ImageReader(img_buffer_pdf)
+            img_buf = io.BytesIO()
+            st.session_state.qr_image.save(img_buf, format='PNG')
+            img_buf.seek(0)
             
-            # Center the QR code
-            qr_x = (width - qr_size_pdf) / 2
-            c.drawImage(qr_img, qr_x, qr_y_position - qr_size_pdf, 
-                       width=qr_size_pdf, height=qr_size_pdf)
+            qr_x = (w - qr_pdf_size) / 2
+            c.drawImage(ImageReader(img_buf), qr_x, qr_y - qr_pdf_size, 
+                       qr_pdf_size, qr_pdf_size)
             
             c.save()
-            buffer.seek(0)
-            return buffer
+            buf.seek(0)
+            return buf
         
-        pdf_buffer = generate_pdf()
         st.download_button(
-            label="📄 Download as PDF",
-            data=pdf_buffer,
-            file_name=f"qrcode_document_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
-            mime="application/pdf",
+            "📄 Download PDF",
+            create_pdf(),
+            f"qrcode_{datetime.datetime.now():%Y%m%d_%H%M%S}.pdf",
+            "application/pdf",
             use_container_width=True
         )
 
 # Footer
 st.divider()
 st.markdown(
-    """
-    <div style='text-align: center; color: #666; padding: 20px;'>
-        <p>QR Code Generator & PDF Exporter | Created with Streamlit</p>
-    </div>
-    """,
+    "<div style='text-align: center; color: #666; padding: 20px;'>"
+    "<p>QR Code Generator & PDF Exporter | Built with Streamlit</p>"
+    "</div>",
     unsafe_allow_html=True
 )
-
